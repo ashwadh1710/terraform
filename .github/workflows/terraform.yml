@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       stack:
-        description: 'The directory path of the Terraform stack to run'  # Parameter 1: Stack directory
+        description: 'The directory path of the Terraform stack to run'
         required: true
-        default: 'stack1'
+        default: 'examples/sample_app'
       terraform_version:
-        description: 'The Terraform version to use'  # Parameter 2: Terraform version
+        description: 'The Terraform version to use'
         required: true
         default: '1.5.7'
       auto_approve:
-        description: 'Automatically approve the terraform apply step'  # Parameter 3: Auto-approve
+        description: 'Automatically approve the terraform apply step'
         required: false
         default: 'true'
         type: boolean
@@ -25,7 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 1: Set up Terraform using the specified version
+      # Step 1: Setup Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -34,12 +34,12 @@ jobs:
       # Step 2: Initialize Terraform in the specified directory
       - name: Terraform Init
         run: terraform init
-        working-directory: terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
 
       # Step 3: Plan Terraform in the specified directory
       - name: Terraform Plan
         run: terraform plan
-        working-directory: terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
 
       # Step 4: Apply Terraform in the specified directory with or without auto-approval
       - name: Terraform Apply
@@ -48,4 +48,4 @@ jobs:
             terraform apply -auto-approve
           else
             terraform apply
-        working-directory: terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
