@@ -1,0 +1,49 @@
+name: 'Terraform GCP Provisioning'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up Google Cloud credentials
+      - name: Set up Google Cloud credentials
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      # Configure Google Cloud SDK
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: 'your-google-cloud-project-id'
+          export_default_credentials: true
+
+      # Set up Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      # Terraform Init
+      - name: Terraform Init
+        run: terraform init
+
+      # Terraform Plan
+      - name: Terraform Plan
+        run: terraform plan
+
+      # Terraform Apply (Requires approval for production environments)
+      - name: Terraform Apply
+        if: github.event_name == 'push'
+        run: terraform apply -auto-approve
