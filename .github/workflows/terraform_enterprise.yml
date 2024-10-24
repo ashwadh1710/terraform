@@ -1,0 +1,106 @@
+name: 'Terraform Enterprise Automation'
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: 'The directory path of the Terraform stack to run (e.g., examples/sample_app)'
+        required: true
+        default: 'examples/sample_app'
+      terraform_version:
+        description: 'The Terraform version to use'
+        required: true
+        default: '1.5.7'
+      tfe_workspace_name:
+        description: 'The Terraform Enterprise workspace name'
+        required: true
+        default: 'your-default-tfe-workspace-name'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 1: Setup Terraform with the specified version
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ github.event.inputs.terraform_version }}
+
+      # Step 2: Prepare Terraform configuration from the specified folder
+      - name: Prepare Terraform configuration
+        run: |
+          tar -cvzf config.tar.gz -C ./${{ github.event.inputs.stack }} .
+        # Creates a compressed tarball of the configuration files from the inputted stack
+
+      # Step 3: Upload configuration to Terraform Enterprise workspace
+      - name: Upload Terraform configuration to TFE
+        env:
+          TFE_API_TOKEN: ${{ secrets.TFE_API_TOKEN }}
+        run: |
+          TFE_WORKSPACE_NAME="${{ github.event.inputs.tfe_workspace_name }}"
+          
+          # Get the workspace ID from the workspace name
+          WORKSPACE_ID=$(curl -s \
+            --header "Authorization: Bearer $TFE_API_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            "https://app.terraform.io/api/v2/organizations/your-org-name/workspaces/$TFE_WORKSPACE_NAME" | jq -r '.data.id')
+          
+          # Initialize a new configuration version
+          UPLOAD_RESPONSE=$(curl -s \
+            --header "Authorization: Bearer $TFE_API_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data '{"data":{"type":"configuration-versions"}}' \
+            "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/configuration-versions")
+          
+          # Extract the upload URL from the response
+          UPLOAD_URL=$(echo $UPLOAD_RESPONSE | jq -r '.data.attributes."upload-url"')
+          
+          # Upload the tarball of the configuration to the upload URL
+          curl -s --request PUT \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary @config.tar.gz \
+            "$UPLOAD_URL"
+
+      # Step 4: Trigger a Terraform Run after uploading the configuration
+      - name: Trigger a Terraform Run
+        env:
+          TFE_API_TOKEN: ${{ secrets.TFE_API_TOKEN }}
+        run: |
+          WORKSPACE_ID=$(curl -s \
+            --header "Authorization: Bearer $TFE_API_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            "https://app.terraform.io/api/v2/organizations/your-org-name/workspaces/${{ github.event.inputs.tfe_workspace_name }}" | jq -r '.data.id')
+
+          # Trigger the run for the workspace
+          RUN_PAYLOAD=$(cat <<EOF
+          {
+            "data": {
+              "attributes": {
+                "message": "Triggered by GitHub Actions",
+                "is-destroy": false
+              },
+              "type": "runs",
+              "relationships": {
+                "workspace": {
+                  "data": {
+                    "type": "workspaces",
+                    "id": "$WORKSPACE_ID"
+                  }
+                }
+              }
+            }
+          }
+          EOF
+          )
+
+          curl -s \
+            --header "Authorization: Bearer $TFE_API_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data "$RUN_PAYLOAD" \
+            "https://app.terraform.io/api/v2/runs"
