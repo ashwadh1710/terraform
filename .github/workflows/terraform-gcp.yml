@@ -16,18 +16,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Set up Google Cloud credentials
-      - name: Set up Google Cloud credentials
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      # # Set up Google Cloud credentials
+      # - name: Set up Google Cloud credentials
+      #   uses: google-github-actions/auth@v1
+      #   with:
+      #     credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      # Configure Google Cloud SDK
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          project_id: 'your-google-cloud-project-id'
-          export_default_credentials: true
+      # # Configure Google Cloud SDK
+      # - name: Set up Google Cloud SDK
+      #   uses: google-github-actions/setup-gcloud@v1
+      #   with:
+      #     project_id: 'your-google-cloud-project-id'
+      #     export_default_credentials: true
 
       # Set up Terraform
       - name: Set up Terraform
