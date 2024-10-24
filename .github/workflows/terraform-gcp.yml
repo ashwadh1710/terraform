@@ -40,10 +40,8 @@ jobs:
         run: terraform init
 
       # Terraform Plan
-      - name: Terraform Plan
+      - name: Terraform Plan #terraform validate
         run: terraform plan
 
-      # Terraform Apply (Requires approval for production environments)
-      - name: Terraform Apply
-        if: github.event_name == 'push'
-        run: terraform apply -auto-approve
+
+    
