@@ -1,0 +1,51 @@
+name: 'Terraform Multi-Stack Deployment'
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: 'The directory path of the Terraform stack to run'  # Parameter 1: Stack directory
+        required: true
+        default: 'stack1'
+      terraform_version:
+        description: 'The Terraform version to use'  # Parameter 2: Terraform version
+        required: true
+        default: '1.5.7'
+      auto_approve:
+        description: 'Automatically approve the terraform apply step'  # Parameter 3: Auto-approve
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 1: Set up Terraform using the specified version
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ github.event.inputs.terraform_version }}
+
+      # Step 2: Initialize Terraform in the specified directory
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/${{ github.event.inputs.stack }}
+
+      # Step 3: Plan Terraform in the specified directory
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: terraform/${{ github.event.inputs.stack }}
+
+      # Step 4: Apply Terraform in the specified directory with or without auto-approval
+      - name: Terraform Apply
+        run: |
+          if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
+            terraform apply -auto-approve
+          else
+            terraform apply
+        working-directory: terraform/${{ github.event.inputs.stack }}
