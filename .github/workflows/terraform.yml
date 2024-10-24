@@ -34,12 +34,12 @@ jobs:
       # Step 2: Initialize Terraform in the specified directory
       - name: Terraform Init
         run: terraform init
-        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack }}
 
       # Step 3: Plan Terraform in the specified directory
       - name: Terraform Plan
         run: terraform plan
-        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack }}
 
       # Step 4: Apply Terraform in the specified directory with or without auto-approval
       - name: Terraform Apply
@@ -48,4 +48,4 @@ jobs:
             terraform apply -auto-approve
           else
             terraform apply
-        working-directory: ${{ github.workspace }}/terraform/${{ github.event.inputs.stack }}
+        working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack }}
