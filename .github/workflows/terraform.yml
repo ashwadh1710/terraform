@@ -42,10 +42,12 @@ jobs:
         working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack }}
 
       # Step 4: Apply Terraform in the specified directory with or without auto-approval
+            # Step 4: Apply Terraform in the specified directory with or without auto-approval
       - name: Terraform Apply
         run: |
           if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
             terraform apply -auto-approve
           else
             terraform apply
-        working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack }}
+          fi
+        working-directory: ${{ github.workspace }}/${{ github.event.inputs.stack || 'examples/sample_app' }}
