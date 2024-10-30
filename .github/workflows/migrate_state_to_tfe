@@ -1,0 +1,45 @@
+name: Upload Local State to Terraform Enterprise
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  upload-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Prepare State File
+        id: prepare_state
+        working-directory: examples/sample_app
+        run: |
+          # Check if state file exists
+          if [ ! -f "./terraform.tfstate" ]; then
+            echo "State file not found!"
+            exit 1
+          fi
+          echo "Preparing to upload state file..."
+
+      - name: Upload State File to Terraform Enterprise
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TFE_ORG: ${{ secrets.TFE_ORG }}
+          TFE_WORKSPACE: ${{ secrets.TFE_WORKSPACE }}
+        working-directory: examples/sample_app
+        run: |
+          # Get the Workspace ID
+          WORKSPACE_ID=$(curl \
+            --header "Authorization: Bearer $TFE_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            "https://app.terraform.io/api/v2/organizations/$TFE_ORG/workspaces/$TFE_WORKSPACE" | jq -r ".data.id")
+
+          # Upload the state file
+          curl \
+            --header "Authorization: Bearer $TFE_TOKEN" \
+            --header "Content-Type: application/vnd.api+json" \
+            --request POST \
+            --data @./terraform.tfstate \
+            "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/state-versions"
