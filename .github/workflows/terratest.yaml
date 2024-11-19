@@ -1,0 +1,39 @@
+name: Run Terratest
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  terratest:
+    name: Terratest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
+
+      - name: Install Terraform 1.6.5
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.6.5'
+          terraform_wrapper: false
+
+      - name: Run Terratest
+        env:
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          # Initialize Go module for Terratest (if not already present)
+          go mod init terratest || true
+          go mod tidy
+          
+          # Run Terratest
+          go test -v test/firewall_test.go
