@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
@@ -10,9 +11,9 @@ import (
 func TestFirewallDeployment(t *testing.T) {
 	// Define Terraform options
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../modules/ngfw", // Path to the Terraform configuration
+		TerraformDir: "../modules/ngfw", // Adjust this path as needed
 		Vars: map[string]interface{}{
-			"project_id": "anonymous",
+			"project_id": "anonymous-442118",
 			"region":     "us-central1",
 		},
 	}
@@ -36,8 +37,24 @@ func TestFirewallDeployment(t *testing.T) {
 	firewallDirection := terraform.Output(t, terraformOptions, "firewall_direction")
 	assert.Equal(t, "INGRESS", firewallDirection, "Firewall direction should be 'INGRESS'")
 
-	firewallAllowed := terraform.OutputListOfObjects(t, terraformOptions, "firewall_allowed")
-	assert.GreaterOrEqual(t, len(firewallAllowed), 1, "Firewall should have at least one allowed rule")
+	// Process firewall_allowed output
+	firewallAllowed := terraform.OutputJson(t, terraformOptions, "firewall_allowed")
+
+	var allowedRules []map[string]interface{}
+	if err := json.Unmarshal([]byte(firewallAllowed), &allowedRules); err != nil {
+		t.Fatalf("Failed to parse firewall_allowed output as JSON: %v", err)
+	}
+
+	assert.GreaterOrEqual(t, len(allowedRules), 1, "Firewall should have at least one allowed rule")
+
+	// Validate the first rule
+	firstRule := allowedRules[0]
+	assert.Equal(t, "tcp", firstRule["protocol"], "The protocol of the firewall rule should be 'tcp'")
+
+	ports := firstRule["ports"].([]interface{}) // Ensure ports is a slice
+	assert.Contains(t, ports, "80", "The rule should allow port 80")
+	assert.Contains(t, ports, "443", "The rule should allow port 443")
+	assert.Contains(t, ports, "22", "The rule should allow port 22")
 
 	firewallTargetTags := terraform.OutputList(t, terraformOptions, "firewall_target_tags")
 	assert.Contains(t, firewallTargetTags, "allow-http-https-ssh", "Firewall should have the target tag 'allow-http-https-ssh'")

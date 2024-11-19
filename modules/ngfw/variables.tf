@@ -1,5 +1,6 @@
 variable "project_id" {
   description = "The Google Cloud project ID"
+  default = "anonymous-442118"
 }
 
 variable "region" {
