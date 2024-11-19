@@ -10,7 +10,7 @@ resource "google_compute_firewall" "default" {
 
   allow {
     protocol = "tcp"
-    ports    = ["80", "443", "22"]
+    ports    = ["80", "443", "22", "8443"]
   }
 
   target_tags = ["allow-http-https-ssh"]
