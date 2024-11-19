@@ -36,4 +36,4 @@ jobs:
           go mod tidy
           
           # Run Terratest
-          go test -v test/firewall_test.go
+          go test -v test/ngfw.go
