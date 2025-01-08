@@ -1,1 +1,153 @@
 
+### **Jira Story Template**
+
+#### **Title:**
+Resolve Dependency Issue in DDP Test Pipelines Due to Missing `tomcat-embedded-core` Artifact
+
+---
+
+#### **Description:**
+As a developer, I need to fix the dependency resolution issue in all DDP test pipelines caused by the `tomcat-embedded-core` artifact not being resolved from the Maven public repository. The issue results in pipeline failures, even though the applications do not directly use this dependency. A solution must be implemented to explicitly specify the dependency version to ensure the pipelines run successfully.
+
+---
+
+#### **Acceptance Criteria:**
+1. All DDP test pipelines should successfully resolve dependencies without errors.
+2. The dependency `tomcat-embedded-core:jar` should be explicitly added to the `pom.xml` with version `9.0.98`.
+3. Validate the pipeline success after applying the fix.
+4. Ensure no unrelated dependencies or functionality are impacted by the solution.
+
+---
+
+#### **Tasks:**
+1. **Analyze the Dependency Issue:**
+   - Identify why the pipeline is attempting to resolve `tomcat-embedded-core:jar:9.0.71` from the Maven repository.
+   - Verify that the application does not directly use this dependency but may be pulling it as a transitive dependency.
+
+2. **Implement the Fix:**
+   - Add the following dependency to the `pom.xml` file of the affected projects:
+     ```xml
+     <dependency>
+         <groupId>org.apache.tomcat.embed</groupId>
+         <artifactId>tomcat-embedded-core</artifactId>
+         <version>9.0.98</version>
+     </dependency>
+     ```
+   - Ensure the explicit version `9.0.98` is used to resolve the issue.
+
+3. **Validate the Solution:**
+   - Run the DDP test pipelines and confirm all pipelines complete successfully.
+   - Verify that dependency resolution is now working correctly and no new issues are introduced.
+
+4. **Document and Communicate:**
+   - Update the project documentation if necessary to reflect the addition of the explicit dependency.
+   - Notify the team about the root cause and the solution implemented.
+
+---
+
+#### **Comments:**
+**Issue Details:**
+- Error observed in DDP test pipelines:
+  ```
+  Could not resolve dependencies for project <project-name>: Could not transfer artifact tomcat-embedded-core:jar:9.0.71 from/to Maven Central Repository.
+  ```
+- Root cause: The `tomcat-embedded-core` dependency version `9.0.71` is unavailable or inaccessible in the Maven repository, causing dependency resolution to fail.
+- This dependency is being pulled transitively, although the applications themselves do not directly use it.
+
+**Solution Implemented:**
+- Explicitly specified the `tomcat-embedded-core` dependency in the `pom.xml` file with version `9.0.98` to ensure proper resolution.
+  ```xml
+  <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embedded-core</artifactId>
+      <version>9.0.98</version>
+  </dependency>
+  ```
+
+**Results:**
+- After implementing the fix, the pipelines were re-run, and all dependencies were successfully resolved.
+- The issue is now resolved, and no further dependency-related failures were observed.
+
+---
+
+#### **Priority:**
+High (Pipeline failures block development and testing).
+
+---
+
+#### **Labels:**
+- Dependency Issue
+- Maven
+- DDP Test Pipelines
+- CI/CD
+
+---
+
+Let me know if you need additional details or further refinement!
+
+
+
+
+### **Standup Notes**
+
+**Yesterday:**
+- Investigated the dependency issue in DDP test pipelines where `tomcat-embedded-core:jar:9.0.71` could not be resolved from the Maven public repository.
+- Identified the root cause as a transitive dependency being pulled, though not directly used by the applications.
+- Found a solution to explicitly specify the `tomcat-embedded-core` dependency in `pom.xml` with version `9.0.98`.
+
+**Today:**
+- Implemented the fix by adding the following dependency in the `pom.xml`:
+  ```xml
+  <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embedded-core</artifactId>
+      <version>9.0.98</version>
+  </dependency>
+  ```
+- Re-ran DDP test pipelines and confirmed all pipelines completed successfully without errors.
+- Communicated the root cause and solution to the team.
+
+**Blockers:**
+- None. Issue has been resolved, and pipelines are stable.
+
+
+### **Standup Notes:**
+
+- **Issue:** All DDP test pipelines were failing due to a dependency resolution error: `Could not transfer artifact tomcat-embedded-core:jar:9.0.71` from Maven public repository, even though the applications do not directly use this dependency.
+
+- **Root Cause:** The `tomcat-embedded-core:jar:9.0.71` dependency was being pulled transitively, but it was either unavailable or inaccessible in the Maven repository.
+
+- **Solution:**
+  - Explicitly added the dependency `tomcat-embedded-core:jar` with version `9.0.98` to the `pom.xml` of the affected projects.
+  - This ensured the proper resolution of the dependency during pipeline runs.
+
+- **Status:** The pipelines were successfully re-run after the fix, and all dependencies were resolved without errors. The issue is now fully resolved.
+
+- **Next Steps:** No further actions required unless similar issues arise. Monitoring ongoing pipeline runs for stability.
+
+
+
+### **Standup Notes:**
+
+#### **Updates:**
+
+1. **DDP Test Pipelines Dependency Issue:**
+   - **Issue:** All DDP test pipelines were failing due to a dependency resolution error: `Could not transfer artifact tomcat-embedded-core:jar:9.0.71` from Maven public repository, despite the applications not directly using this dependency.
+   - **Root Cause:** The `tomcat-embedded-core:jar:9.0.71` dependency was being pulled transitively, but it was either unavailable or inaccessible in the Maven repository.
+   - **Solution:** Explicitly added `tomcat-embedded-core:jar` with version `9.0.98` to the `pom.xml` of the affected projects to ensure proper resolution.
+   - **Status:** Pipelines were successfully re-run, and all dependencies resolved without errors. The issue is now fixed.
+   - **Next Steps:** Monitoring ongoing pipeline runs for stability.
+
+2. **Container Patching Solution:**
+   - **Objective:** Develop a solution to patch existing deployed container applications in OpenShift (OCP) clusters with updated base images without requiring application artifacts or rebuilding.
+   - **Progress:**
+     - Analyzed the steps to fetch deployed images and update their base layers dynamically.
+     - Created a Jenkins pipeline that automates the following:
+       - Lists existing images in OCP clusters/projects.
+       - Builds new images with updated base layers.
+       - Updates deployments with the patched images.
+       - Validates deployments to ensure successful updates.
+     - Solution validated successfully in test environments.
+   - **Next Steps:** Expand testing to additional environments and finalize the pipeline for production use.
+
+Let me know if further updates or refinements are needed!
