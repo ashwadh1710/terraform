@@ -1,0 +1,24 @@
+
+Release Notes
+Release Name: Smart Assistant Component for DDP AppWeb
+Release Date: [Insert Release Date]
+Overview:
+We are excited to announce the release of the Smart Assistant Component in the DDP AppWeb application. This new feature empowers admins to manage and monitor the Smart Assistant's operations seamlessly. The release also introduces enhanced logging and feedback capture capabilities, enabling deeper insights into user interactions and overall performance.
+
+Key Features:
+Smart Assistant Operations Management:
+
+Admins can now perform key operations related to the Smart Assistant directly through the admin page:
+Onboarding APIs: Easily onboard new APIs specific to the Smart Assistant.
+Update API Configurations: Modify existing API configurations for better integration and performance.
+Delete API Configurations: Remove outdated or unused API configurations effortlessly.
+Audit Logs:
+
+The Smart Assistant now provides a robust audit logging system:
+Fetch detailed logs of user interactions with the Smart Assistant tools.
+Track operations performed by users for troubleshooting and compliance purposes.
+Feedback Data Component:
+
+A new feedback data feature is integrated into the admin page:
+Captures user feedback on their experiences with the Smart Assistant.
+Helps admins and developers understand user satisfaction and identify areas for improvement.
