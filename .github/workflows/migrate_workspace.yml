@@ -1,0 +1,92 @@
+name: Move Terraform Workspace
+
+on:
+  workflow_dispatch:
+    inputs:
+      old_workspace:
+        description: "Name of the old Terraform workspace"
+        required: true
+        default: "abc-test"
+      new_workspace:
+        description: "Name of the new Terraform workspace"
+        required: true
+        default: "abc-dev-collector"
+      delete_old_workspace:
+        description: "Delete the old workspace after migration"
+        required: false
+        default: false # Default is not to delete
+
+jobs:
+  move-workspace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Export State from Old Workspace
+        id: export_state
+        run: |
+          OLD_WORKSPACE=${{ github.event.inputs.old_workspace }}
+          curl -s \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            https://app.terraform.io/api/v2/workspaces/${OLD_WORKSPACE}/current-state-version \
+            | jq -r '.data.attributes."hosted-state-download-url"' \
+            | xargs curl -o old-workspace.tfstate
+
+      - name: Upload State to New Workspace
+        run: |
+          NEW_WORKSPACE=${{ github.event.inputs.new_workspace }}
+          curl -s \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            --data-binary @old-workspace.tfstate \
+            "https://app.terraform.io/api/v2/workspaces/${NEW_WORKSPACE}/state-versions"
+
+      - name: Transfer Variables from Old to New Workspace
+        run: |
+          OLD_WORKSPACE=${{ github.event.inputs.old_workspace }}
+          NEW_WORKSPACE=${{ github.event.inputs.new_workspace }}
+
+          VARIABLES=$(curl -s \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            https://app.terraform.io/api/v2/workspaces/${OLD_WORKSPACE}/vars \
+            | jq -c '.data[]')
+
+          for VAR in $VARIABLES; do
+            KEY=$(echo $VAR | jq -r '.attributes.key')
+            VALUE=$(echo $VAR | jq -r '.attributes.value')
+            SENSITIVE=$(echo $VAR | jq -r '.attributes.sensitive')
+
+            curl -s \
+              --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+              --header "Content-Type: application/vnd.api+json" \
+              --data "{
+                \"data\": {
+                  \"type\": \"vars\",
+                  \"attributes\": {
+                    \"key\": \"$KEY\",
+                    \"value\": \"$VALUE\",
+                    \"category\": \"terraform\",
+                    \"hcl\": false,
+                    \"sensitive\": $SENSITIVE
+                  }
+                }
+              }" \
+              https://app.terraform.io/api/v2/workspaces/${NEW_WORKSPACE}/vars
+          done
+
+      - name: Validate New Workspace
+        run: |
+          terraform plan -var-file=old-workspace.tfstate
+
+      - name: Conditionally Delete Old Workspace
+        if: ${{ github.event.inputs.delete_old_workspace == 'true' }}
+        run: |
+          OLD_WORKSPACE=${{ github.event.inputs.old_workspace }}
+          curl -s \
+            --header "Authorization: Bearer ${{ secrets.TFE_TOKEN }}" \
+            --header "Content-Type: application/vnd.api+json" \
+            -X DELETE \
+            https://app.terraform.io/api/v2/workspaces/${OLD_WORKSPACE}
