@@ -1,24 +1,73 @@
+pipeline {
+    agent {
+        docker {
+            image 'docker:latest'
+        }
+    }
 
-Release Notes
-Release Name: Smart Assistant Component for DDP AppWeb
-Release Date: [Insert Release Date]
-Overview:
-We are excited to announce the release of the Smart Assistant Component in the DDP AppWeb application. This new feature empowers admins to manage and monitor the Smart Assistant's operations seamlessly. The release also introduces enhanced logging and feedback capture capabilities, enabling deeper insights into user interactions and overall performance.
+    environment {
+        IMAGE_ID = 'your-docker-image-id' // Replace with your Docker image ID
+    }
 
-Key Features:
-Smart Assistant Operations Management:
+    stages {
+        stage('Clone Extract Script') {
+            steps {
+                echo 'Cloning script to extract Dockerfile...'
+                sh '''
+                # Clone the repository containing the script or define it inline
+                cat << 'EOF' > extract_dockerfile.sh
+                #!/bin/bash
+                IMAGE=$1
+                if [ -z "$IMAGE" ]; then
+                    echo "Usage: $0 <image-id>"
+                    exit 1
+                fi
 
-Admins can now perform key operations related to the Smart Assistant directly through the admin page:
-Onboarding APIs: Easily onboard new APIs specific to the Smart Assistant.
-Update API Configurations: Modify existing API configurations for better integration and performance.
-Delete API Configurations: Remove outdated or unused API configurations effortlessly.
-Audit Logs:
+                docker history --no-trunc $IMAGE | awk 'NR>1 {print $NF}' | while read LINE; do
+                    if [[ "$LINE" == *"#(nop)"* ]]; then
+                        echo "${LINE#*#(nop) }"
+                    else
+                        echo "RUN $LINE"
+                    fi
+                done
+                EOF
+                chmod +x extract_dockerfile.sh
+                '''
+            }
+        }
 
-The Smart Assistant now provides a robust audit logging system:
-Fetch detailed logs of user interactions with the Smart Assistant tools.
-Track operations performed by users for troubleshooting and compliance purposes.
-Feedback Data Component:
+        stage('Pull Docker Image') {
+            steps {
+                echo "Pulling Docker image with ID: ${IMAGE_ID}..."
+                sh '''
+                docker pull ${IMAGE_ID}
+                '''
+            }
+        }
 
-A new feedback data feature is integrated into the admin page:
-Captures user feedback on their experiences with the Smart Assistant.
-Helps admins and developers understand user satisfaction and identify areas for improvement.
+        stage('Extract Dockerfile') {
+            steps {
+                echo 'Extracting Dockerfile...'
+                sh '''
+                ./extract_dockerfile.sh ${IMAGE_ID} > Dockerfile_extracted
+                '''
+            }
+        }
+
+        stage('Archive Dockerfile') {
+            steps {
+                echo 'Archiving extracted Dockerfile...'
+                archiveArtifacts artifacts: 'Dockerfile_extracted', fingerprint: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully. Dockerfile has been extracted and archived.'
+        }
+        failure {
+            echo 'Pipeline failed. Please check the logs for details.'
+        }
+    }
+}
