@@ -1,0 +1,38 @@
+sendMessage(): void {
+    if (!this.message.trim()) return; // Prevent empty messages
+    
+    console.log("Checking for message:", this.message, "currentApi:", this.currentApiName, "params:", this.apiData);
+
+    // If waiting for confirmation, enforce Yes/No input
+    if (this.waitingForConfirmation) {
+        const allowedResponses = ['yes', 'no'];
+        if (!allowedResponses.includes(this.message.toLowerCase())) {
+            this.addMessage({ sender: 'bot', text: "Please select Yes or No.", submitActions: false, botActions: false });
+            this.message = ""; // Clear invalid input
+            return;
+        }
+        
+        this.waitingForConfirmation = false; // Reset flag after valid response
+        this.processYesNoResponse(this.message.toLowerCase()); // Handle Yes/No
+        return;
+    }
+
+    // Handle general user interactions
+    this.addMessage({ sender: 'self', text: this.message });
+
+    if (this.eligibleToComputeParams) {
+        let currentInputValue = this.message;
+        console.log("Computing params", this.apiData);
+        this.addMessage({ sender: 'bot', text: "Let me take a look!", submitActions: false, botActions: false });
+        this.tryToComputeParams(this.apiData, currentInputValue);
+    } else {
+        if (this.currentApiName) {
+            this.handleGreeting(this.message);
+            this.handleKeywordInput(this.message);
+        } else {
+            this.collectInputs();
+        }
+    }
+
+    this.message = ""; // Clear input field after processing
+}
