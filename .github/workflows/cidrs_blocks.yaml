@@ -48,11 +48,11 @@ jobs:
 
       - name: Commit and push updated CIDR list
         env:
-          GH_PAT: ${{ secrets.PAT_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          git config --global user.name "ashwadh1710"
-          git config --global user.email "ashwadh1710@gmail.com"
-          git remote set-url origin "https://ashwadh1710:ashwadh%40123@github.com/ashwadh1710/terraform.git"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/ashwadh1710/terraform.git
           git add cidr_blocks.json
           git commit -m "Updated CIDR blocks list" || echo "No changes to commit"
           git push origin main || echo "No changes to push"
