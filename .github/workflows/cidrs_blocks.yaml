@@ -52,7 +52,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/ashwadh1710/terraform.git
+          git remote set-url origin https://x-access-token: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@github.com/ashwadh1710/terraform.git
           git add cidr_blocks.json
           git commit -m "Updated CIDR blocks list" || echo "No changes to commit"
           git push origin main || echo "No changes to push"
