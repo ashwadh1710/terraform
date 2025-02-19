@@ -70,8 +70,8 @@ jobs:
         run: terraform init
 
       - name: Create Terraform variable file
-        run: |          
-          echo 'cidr_blocks = ' > terraform.tfvars
+        run: |
+          echo -n 'cidr_blocks = ' > terraform.tfvars
           jq -c '.cidrs' cidr_blocks.json >> terraform.tfvars
           cat terraform.tfvars
 
