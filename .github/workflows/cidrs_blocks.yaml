@@ -1,4 +1,4 @@
-name: Terraform Enterprise Deployment with CIDR Management
+name: Terraform CIDR Management & Execution
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
         description: "New CIDR block to add"
         required: false
         type: string
-        default: "10.10.10.10/32"  # Default CIDR block
+        default: "10.10.10.10/32"
 
 jobs:
   process-cidr:
@@ -24,36 +24,26 @@ jobs:
             echo '{"cidrs": []}' > cidr_blocks.json
           fi
 
-      - name: Read existing CIDR blocks
-        id: read-json
-        run: |
-          CIDR_LIST=$(jq -c '.cidrs' cidr_blocks.json)
-          echo "Existing CIDR blocks: $CIDR_LIST"
-          echo "existing_cidrs=$CIDR_LIST" >> $GITHUB_ENV
-
       - name: Add new CIDR block if provided (avoid duplicates)
         id: update-json
         run: |
           NEW_CIDR="${{ github.event.inputs.cidr_block }}"
 
-          # Ensure jq is available
+          # Ensure jq is installed
           if ! command -v jq &> /dev/null; then
-            echo "jq not found, installing..."
             sudo apt-get install -y jq
           fi
 
-          # Read existing CIDRs as an array
+          # Read existing CIDRs
           EXISTING_CIDRS=$(jq -c '.cidrs' cidr_blocks.json)
 
           # Check if CIDR already exists
           if echo "$EXISTING_CIDRS" | jq -e --arg new_cidr "$NEW_CIDR" '. | index($new_cidr)' > /dev/null; then
             echo "CIDR block $NEW_CIDR already exists. No changes made."
-            echo "updated_cidrs=$EXISTING_CIDRS" >> "$GITHUB_ENV"
           else
             UPDATED_LIST=$(jq --arg new_cidr "$NEW_CIDR" '.cidrs += [$new_cidr] | {cidrs: .cidrs}' cidr_blocks.json)
             echo "$UPDATED_LIST" > cidr_blocks.json
             echo "Updated CIDR blocks: $UPDATED_LIST"
-            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> "$GITHUB_ENV"
           fi
 
       - name: Commit and push updated CIDR list
@@ -64,16 +54,30 @@ jobs:
           git commit -m "Updated CIDR blocks list" || echo "No changes to commit"
           git push origin main || echo "No changes to push"
 
-  package-and-upload:
+  terraform-execute:
     needs: process-cidr
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      - name: Initialize Terraform
+        run: terraform init
+
       - name: Create Terraform variable file
         run: |
           echo 'variable "cidr_blocks" { default = ' > terraform.tfvars
-          echo '${{ needs.process-cidr.outputs.updated_cidrs }}' >> terraform.tfvars
+          jq -c '.cidrs' cidr_blocks.json >> terraform.tfvars
           echo ' }' >> terraform.tfvars
           cat terraform.tfvars
+
+      - name: Run Terraform Plan
+        run: terraform plan -var-file=terraform.tfvars
+
+      - name: Run Terraform Apply
+        run: terraform apply -var-file=terraform.tfvars -auto-approve
