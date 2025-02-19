@@ -1,0 +1,64 @@
+name: Terraform Enterprise Deployment with CIDR Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      cidr_block:
+        description: "New CIDR block to add"
+        required: false
+        type: string
+
+jobs:
+  process-cidr:
+    runs-on: ubuntu-latest
+    outputs:
+      updated_cidrs: ${{ steps.update-json.outputs.updated_cidrs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Read existing CIDR blocks
+        id: read-json
+        run: |
+          if [ ! -f cidr_blocks.json ]; then
+            echo '{"cidrs": []}' > cidr_blocks.json
+          fi
+          CIDR_LIST=$(jq -c '.cidrs' cidr_blocks.json)
+          echo "Existing CIDR blocks: $CIDR_LIST"
+          echo "existing_cidrs=$CIDR_LIST" >> $GITHUB_ENV
+
+      - name: Add new CIDR block if provided
+        id: update-json
+        run: |
+          NEW_CIDR="${{ github.event.inputs.cidr_block }}"
+          if [[ -n "$NEW_CIDR" ]]; then
+            UPDATED_LIST=$(jq --arg new_cidr "$NEW_CIDR" '.cidrs += [$new_cidr] | unique' cidr_blocks.json)
+            echo "$UPDATED_LIST" > cidr_blocks.json
+            echo "Updated CIDR blocks: $UPDATED_LIST"
+            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> $GITHUB_ENV
+          else
+            echo "No new CIDR provided. Using existing list."
+            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> $GITHUB_ENV
+
+      - name: Commit and push updated CIDR list
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add cidr_blocks.json
+          git commit -m "Updated CIDR blocks list" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
+
+  package-and-upload:
+    needs: process-cidr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create Terraform variable file
+        run: |
+          echo 'variable "cidr_blocks" { default = ' > terraform.tfvars
+          echo '${{ needs.process-cidr.outputs.updated_cidrs }}' >> terraform.tfvars
+          echo ' }' >> terraform.tfvars
+          cat terraform.tfvars
+
