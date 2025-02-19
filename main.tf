@@ -7,10 +7,6 @@ terraform {
   }
 }
 
-variable "cidr_blocks" {
-  type    = list(string)
-  default = []
-}
 
 locals {
   cidrs = jsondecode(file("${path.module}/cidr_blocks.json"))["cidrs"]
