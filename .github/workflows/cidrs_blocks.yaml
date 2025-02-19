@@ -7,6 +7,7 @@ on:
         description: "New CIDR block to add"
         required: false
         type: string
+        default: "10.10.10.10/32"  # Default CIDR block for testing
 
 jobs:
   process-cidr:
@@ -17,28 +18,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Read existing CIDR blocks
-        id: read-json
+      - name: Ensure cidr_blocks.json exists
         run: |
           if [ ! -f cidr_blocks.json ]; then
             echo '{"cidrs": []}' > cidr_blocks.json
           fi
+
+      - name: Read existing CIDR blocks
+        id: read-json
+        run: |
           CIDR_LIST=$(jq -c '.cidrs' cidr_blocks.json)
           echo "Existing CIDR blocks: $CIDR_LIST"
           echo "existing_cidrs=$CIDR_LIST" >> $GITHUB_ENV
 
-      - name: Add new CIDR block if provided
+      - name: Add new CIDR block if provided (avoid duplicates)
         id: update-json
         run: |
           NEW_CIDR="${{ github.event.inputs.cidr_block }}"
-          if [[ -n "$NEW_CIDR" ]]; then
+
+          # Ensure jq is available
+          if ! command -v jq &> /dev/null; then
+            echo "jq not found, installing..."
+            sudo apt-get install -y jq
+          fi
+
+          # Check if CIDR already exists
+          if jq -e --arg new_cidr "$NEW_CIDR" '.cidrs | index($new_cidr)' cidr_blocks.json > /dev/null; then
+            echo "CIDR block $NEW_CIDR already exists. No changes made."
+            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> "$GITHUB_ENV"
+          else
             UPDATED_LIST=$(jq --arg new_cidr "$NEW_CIDR" '.cidrs += [$new_cidr] | unique' cidr_blocks.json)
             echo "$UPDATED_LIST" > cidr_blocks.json
             echo "Updated CIDR blocks: $UPDATED_LIST"
-            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> $GITHUB_ENV
-          else
-            echo "No new CIDR provided. Using existing list."
-            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> $GITHUB_ENV
+            echo "updated_cidrs=$(jq -c '.cidrs' cidr_blocks.json)" >> "$GITHUB_ENV"
+          fi
 
       - name: Commit and push updated CIDR list
         run: |
@@ -61,4 +74,3 @@ jobs:
           echo '${{ needs.process-cidr.outputs.updated_cidrs }}' >> terraform.tfvars
           echo ' }' >> terraform.tfvars
           cat terraform.tfvars
-
