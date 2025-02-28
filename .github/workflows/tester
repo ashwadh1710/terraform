@@ -1,0 +1,5 @@
+aws ec2 describe-vpc-endpoints --vpc-endpoint-ids <vpc-endpoint-id> --query 'VpcEndpoints[*].Groups[*].GroupId'
+
+aws ec2 modify-vpc-endpoint --vpc-endpoint-id <vpc-endpoint-id> --add-security-group-ids <new-security-group-id>
+aws ec2 modify-vpc-endpoint --vpc-endpoint-id <vpc-endpoint-id> --security-group-ids <sg-12345678> <sg-87654321>
+aws ec2 describe-vpc-endpoints --vpc-endpoint-ids <vpc-endpoint-id>
