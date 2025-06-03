@@ -1,0 +1,50 @@
+ingress_policies = [
+  {
+    title = "test-ingress-policy"
+    ingress_idenity_type = null
+    identities = []
+    access_level = []
+    ingress_from_resource = []
+    ingress_to_resource = ["project/12434"],
+    method_selectors = [
+      {
+        service_name = "pubsub.googleapis.com"
+        method = ["Publisher.publish"]
+        permissions = {}
+      },
+      {
+        service_name = "bigquery.googleapis.com"
+        method = ["*"]
+        permissions = {}
+      }
+    ]
+  }
+]
+
+ egress_policies = [
+   {
+     title = "test-egress-policy"
+     egress_idenity_type = null
+     source_restriction = "SOURCE_RESTRICTION_DISABLED"
+     identities = []
+     access_level = []
+     egress_from_resource = []
+     egress_to_resource = ["project/12434"],
+     egress_to_external_resources = []
+     method_selectors = [
+       {
+         service_name = "pubsub.googleapis.com"
+         method = ["Publisher.publish"]
+         permissions = {}
+       },
+       {
+         service_name = "bigquery.googleapis.com"
+         method = ["*"]
+         permissions = {}
+       },
+       {
+         service_name = ["artifactory.googleapis.com"]
+       }
+     ]
+   }
+ ]
